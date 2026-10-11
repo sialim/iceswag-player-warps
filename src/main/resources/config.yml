@@ -6,7 +6,58 @@ warps:
   page-size: 12
   disabled-worlds: []
 messages:
-  command-feedback: false
+  command-feedback: true
+  player-only: '&cOnly players can use player warps.'
+  unavailable: '&cPlayer warps are unavailable. Ask staff to check /pwarpadmin status.'
+  storage-error: '&cWarp storage is unavailable. Ask staff to check /pwarpadmin status.'
+  command-error: '&cUnable to complete that command. Ask staff to check /pwarpadmin status.'
+  no-permission: '&cYou need {permission} to use this command.'
+  invalid-name: '&cUse a non-reserved name of up to {max-length} letters, numbers, underscores, or hyphens.'
+  name-taken: '&cThe warp name {warp} is already taken.'
+  limit-reached: '&cYou have reached your limit of {limit} player warps.'
+  warp-not-found: '&cPlayer warp {warp} does not exist.'
+  not-owner: '&cYou can only manage your own warps.'
+  private-warp: '&cPlayer warp {warp} is private.'
+  world-disabled: '&cPlayer warps are disabled in {world}.'
+  world-unavailable: '&cThe world for {warp} is unavailable.'
+  outside-world: '&cThat location is outside the playable bounds of {world}.'
+  invalid-page: '&cPage must be a positive number.'
+  invalid-page-arguments: '&cSpecify one page number.'
+  usage: '&eUse /pwarp help for command syntax.'
+  created: '&aPlayer warp {warp} created.'
+  deleted: '&aPlayer warp {warp} deleted.'
+  moved: '&aPlayer warp {warp} moved to your location.'
+  renamed: '&aPlayer warp {old} renamed to {new}.'
+  teleported: '&aTeleported to {warp}.'
+  teleport-failed: '&cTeleportation to {warp} failed or is restricted.'
+  teleport-cancelled: '&cTeleportation to {warp} was cancelled.'
+  teleport-unavailable: '&cEssentials teleportation is unavailable.'
+  teleport-restricted: '&cYou cannot teleport while jailed or frozen.'
+  list-public: '&ePlayer warps &7| Page {page}/{pages}: &f{warps}'
+  list-mine: '&eYour warps &7| Page {page}/{pages}: &f{warps}'
+  list-entry: '{warp} &7({owner})&f'
+  list-separator: ', '
+  list-empty: '&eNo player warps are available.'
+  mine-empty: '&eYou do not own any player warps.'
+  status: '&eRank: {rank} &7| Owned warps: {owned} | Limit: {limit}'
+  unlimited: 'unlimited'
+  enabled-label: 'yes'
+  disabled-label: 'no'
+  help: |-
+    &e/pwarp <name> &7- Visit a player warp
+    &e/pwarp set <name> &7- Create a player warp
+    &e/pwarp delete <name> &7- Delete your player warp
+    &e/pwarp move <name> &7- Move your player warp
+    &e/pwarp rename <name> <new-name> &7- Rename your player warp
+    &e/pwarp list [page] &7- List public player warps
+    &e/pwarp mine [page] &7- List your player warps
+    &e/pwarp status &7- Show your allowance
+  admin-status: '&ePlayer warps: {count} &7| Public: {public} | Claims /warp: {claims} | Essentials: {essentials}'
+  admin-unavailable: '&cUnavailable: {error}'
+  admin-reloaded: '&aPlayer warp configuration and data reloaded.'
+  admin-deleted: '&aPlayer warp {warp} deleted.'
+  admin-error: '&cUnable to complete command: {error}'
+  admin-usage: '&e/pwarpadmin status | reload | delete <name>'
 ranks:
   member:
     permission: playerwarps.rank.member

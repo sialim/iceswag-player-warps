@@ -40,7 +40,7 @@ record WarpSettings(boolean claimCommands, boolean publicWarps, int maximumNameL
                 config.getBoolean("warps.public", true),
                 Math.clamp(config.getInt("warps.maximum-name-length", 32), 1, 64),
                 Math.clamp(config.getInt("warps.page-size", 12), 1, 50), disabled,
-                config.getBoolean("messages.command-feedback", false), List.copyOf(ranks));
+                config.getBoolean("messages.command-feedback", true), List.copyOf(ranks));
     }
 
     Rank rank(Predicate<String> permissions) {
@@ -52,8 +52,7 @@ record WarpSettings(boolean claimCommands, boolean publicWarps, int maximumNameL
         String name = normalize(input);
         if (name.length() > maximumNameLength || !name.matches("[a-z0-9][a-z0-9_-]*")
                 || name.matches("[0-9]+") || RESERVED.contains(name)) {
-            throw new IllegalArgumentException("Use a non-reserved name of up to " + maximumNameLength
-                    + " letters, numbers, underscores, or hyphens.");
+            throw new WarpProblem("invalid-name", "max-length", maximumNameLength);
         }
         return name;
     }

@@ -39,11 +39,11 @@ final class WarpService {
         String name = settings.validateName(input);
         Map<String, PlayerWarp> warps = new HashMap<>(store.all());
         if (warps.containsKey(name)) {
-            throw new IllegalArgumentException("That warp name is already taken.");
+            throw new WarpProblem("name-taken", "warp", name);
         }
         int limit = limit(player);
         if (limit >= 0 && owned(player) >= limit) {
-            throw new IllegalArgumentException("You have reached your player warp limit.");
+            throw new WarpProblem("limit-reached", "limit", limit);
         }
         ensureDestination(player.getLocation());
         warps.put(name, PlayerWarp.at(name, player));
@@ -75,7 +75,7 @@ final class WarpService {
         String name = settings.validateName(replacement);
         Map<String, PlayerWarp> warps = new HashMap<>(store.all());
         if (warps.containsKey(name)) {
-            throw new IllegalArgumentException("That warp name is already taken.");
+            throw new WarpProblem("name-taken", "warp", name);
         }
         warps.remove(warp.name());
         warps.put(name, warp.renamed(name));
@@ -86,7 +86,7 @@ final class WarpService {
         require(player, "playerwarps.use");
         PlayerWarp warp = find(input);
         if (!visible(player, warp)) {
-            throw new IllegalArgumentException("That warp is private.");
+            throw new WarpProblem("private-warp", "warp", warp.name());
         }
         Location destination = warp.location(server);
         ensureDestination(destination);
@@ -106,7 +106,7 @@ final class WarpService {
     private PlayerWarp find(String input) {
         PlayerWarp warp = store.all().get(WarpSettings.normalize(input));
         if (warp == null) {
-            throw new IllegalArgumentException("That player warp does not exist.");
+            throw new WarpProblem("warp-not-found", "warp", WarpSettings.normalize(input));
         }
         return warp;
     }
@@ -115,7 +115,7 @@ final class WarpService {
         require(player, "playerwarps.manage");
         PlayerWarp warp = find(input);
         if (!warp.owner().equals(player.getUniqueId())) {
-            throw new IllegalArgumentException("You can only manage your own warps.");
+            throw new WarpProblem("not-owner", "warp", warp.name());
         }
         return warp;
     }
@@ -127,17 +127,17 @@ final class WarpService {
 
     private void ensureDestination(Location location) {
         if (!settings.worldEnabled(location.getWorld().getName())) {
-            throw new IllegalArgumentException("Player warps are disabled in that world.");
+            throw new WarpProblem("world-disabled", "world", location.getWorld().getName());
         }
         if (location.getY() < location.getWorld().getMinHeight() || location.getY() >= location.getWorld().getMaxHeight()
                 || !location.getWorld().getWorldBorder().isInside(location)) {
-            throw new IllegalArgumentException("That location is outside the world's playable bounds.");
+            throw new WarpProblem("outside-world", "world", location.getWorld().getName());
         }
     }
 
     private static void require(Player player, String permission) {
         if (!player.hasPermission(permission)) {
-            throw new IllegalArgumentException("You do not have permission to do that.");
+            throw new WarpProblem("no-permission", "permission", permission);
         }
     }
 }

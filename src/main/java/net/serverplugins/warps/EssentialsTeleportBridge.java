@@ -21,7 +21,7 @@ final class EssentialsTeleportBridge implements WarpTeleporter {
     public CompletableFuture<Boolean> teleport(Player player, Location destination) {
         Plugin plugin = server.getPluginManager().getPlugin("Essentials");
         if (!(plugin instanceof IEssentials essentials) || !plugin.isEnabled()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Essentials teleportation is unavailable."));
+            return CompletableFuture.failedFuture(new WarpProblem("teleport-unavailable"));
         }
         return teleport(essentials, player, destination);
     }
@@ -29,7 +29,7 @@ final class EssentialsTeleportBridge implements WarpTeleporter {
     static CompletableFuture<Boolean> teleport(IEssentials essentials, Player player, Location destination) {
         User user = essentials.getUser(player);
         if (user == null || user.isJailed() || user.isFreeze()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Teleportation is currently restricted."));
+            return CompletableFuture.failedFuture(new WarpProblem("teleport-restricted"));
         }
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         AsyncTeleport teleport = user.getAsyncTeleport();

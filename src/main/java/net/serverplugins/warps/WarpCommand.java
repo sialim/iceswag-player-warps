@@ -1,9 +1,11 @@
 package net.serverplugins.warps;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import net.kyori.adventure.text.Component;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -21,12 +23,12 @@ final class WarpCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            feedback(sender, "Only players can use player warps.");
+            reply(sender, "player-only");
             return true;
         }
         WarpService service = plugin.service();
         if (service == null) {
-            feedback(player, "Player warps are unavailable. Ask staff to check /pwarpadmin status.");
+            reply(player, "unavailable");
             return true;
         }
         try {
@@ -34,19 +36,22 @@ final class WarpCommand implements CommandExecutor, TabCompleter {
                 case "setwarp" -> {
                     exact(args, 1);
                     service.create(player, args[0]);
-                    feedback(player, "Player warp created.");
+                    feedback(player, "created", "warp", WarpSettings.normalize(args[0]));
                 }
                 case "delwarp" -> {
                     exact(args, 1);
                     service.delete(player, args[0]);
-                    feedback(player, "Player warp deleted.");
+                    feedback(player, "deleted", "warp", WarpSettings.normalize(args[0]));
                 }
                 case "warps" -> showList(player, service, false, page(args, 0));
                 default -> handle(player, service, args);
             }
+        } catch (WarpProblem problem) {
+            reply(player, problem.key(), problem.placeholders());
+        } catch (IOException exception) {
+            reply(player, "storage-error");
         } catch (Exception exception) {
-            feedback(player, exception instanceof java.io.IOException
-                    ? "Warp storage is unavailable. Ask staff to check /pwarpadmin status." : exception.getMessage());
+            reply(player, "command-error");
         }
         return true;
     }
@@ -60,45 +65,57 @@ final class WarpCommand implements CommandExecutor, TabCompleter {
             case "set", "create" -> {
                 exact(args, 2);
                 service.create(player, args[1]);
-                feedback(player, "Player warp created.");
+                feedback(player, "created", "warp", WarpSettings.normalize(args[1]));
             }
             case "delete", "remove" -> {
                 exact(args, 2);
                 service.delete(player, args[1]);
-                feedback(player, "Player warp deleted.");
+                feedback(player, "deleted", "warp", WarpSettings.normalize(args[1]));
             }
             case "move" -> {
                 exact(args, 2);
                 service.move(player, args[1]);
-                feedback(player, "Player warp moved to your location.");
+                feedback(player, "moved", "warp", WarpSettings.normalize(args[1]));
             }
             case "rename" -> {
                 exact(args, 3);
                 service.rename(player, args[1], args[2]);
-                feedback(player, "Player warp renamed.");
+                feedback(player, "renamed", "old", WarpSettings.normalize(args[1]),
+                        "new", WarpSettings.normalize(args[2]));
             }
             case "list" -> showList(player, service, false, page(args, 1));
             case "mine" -> showList(player, service, true, page(args, 1));
             case "status" -> {
                 exact(args, 1);
                 int limit = service.limit(player);
-                reply(player, "Rank: " + service.settings().rank(player::hasPermission).name()
-                        + " | Owned warps: " + service.owned(player) + " | Limit: " + (limit < 0 ? "unlimited" : limit));
+                reply(player, "status", "rank", service.settings().rank(player::hasPermission).name(),
+                        "owned", service.owned(player), "limit", limit < 0 ? plugin.messages().format("unlimited") : limit);
             }
             case "help" -> {
                 exact(args, 1);
-                reply(player, "/pwarp <name> | set <name> | delete <name> | move <name> | rename <name> <new-name> | list [page] | mine [page] | status");
+                reply(player, "help");
             }
             default -> {
                 exact(args, 1);
                 var destination = service.destination(player, args[0], plugin.getServer());
                 plugin.teleporter().teleport(player, destination).whenComplete((success, exception) -> {
                     Runnable response = () -> {
-                        if (player.isOnline()) {
+                        if (plugin.isEnabled() && player.isOnline()) {
                             if (exception != null) {
-                                feedback(player, "Teleportation failed or is restricted.");
+                                Throwable cause = exception;
+                                while ((cause instanceof CompletionException || cause instanceof ExecutionException)
+                                        && cause.getCause() != null) {
+                                    cause = cause.getCause();
+                                }
+                                if (cause instanceof WarpProblem problem) {
+                                    reply(player, problem.key(), problem.placeholders());
+                                } else {
+                                    reply(player, "teleport-failed", "warp", WarpSettings.normalize(args[0]));
+                                }
                             } else if (Boolean.TRUE.equals(success)) {
-                                feedback(player, "Teleported to " + WarpSettings.normalize(args[0]) + ".");
+                                feedback(player, "teleported", "warp", WarpSettings.normalize(args[0]));
+                            } else {
+                                reply(player, "teleport-cancelled", "warp", WarpSettings.normalize(args[0]));
                             }
                         }
                     };
@@ -114,17 +131,21 @@ final class WarpCommand implements CommandExecutor, TabCompleter {
 
     private void showList(Player player, WarpService service, boolean ownOnly, int requestedPage) {
         if (!player.hasPermission("playerwarps.use")) {
-            throw new IllegalArgumentException("You do not have permission to list player warps.");
+            throw new WarpProblem("no-permission", "permission", "playerwarps.use");
         }
         List<PlayerWarp> warps = service.list(player, ownOnly);
+        if (warps.isEmpty()) {
+            reply(player, ownOnly ? "mine-empty" : "list-empty");
+            return;
+        }
         int pageSize = service.settings().pageSize();
         int pages = Math.max(1, (warps.size() + pageSize - 1) / pageSize);
         int page = Math.min(requestedPage, pages);
         int start = (page - 1) * pageSize;
         List<String> names = warps.subList(start, Math.min(start + pageSize, warps.size())).stream()
-                .map(warp -> warp.name() + " (" + warp.ownerName() + ")").toList();
-        reply(player, (ownOnly ? "Your warps" : "Player warps") + " | Page " + page + "/" + pages
-                + ": " + (names.isEmpty() ? "none" : String.join(", ", names)));
+                .map(warp -> plugin.messages().format("list-entry", "warp", warp.name(), "owner", warp.ownerName())).toList();
+        reply(player, ownOnly ? "list-mine" : "list-public", "page", page, "pages", pages,
+                "total", warps.size(), "warps", String.join(plugin.messages().format("list-separator"), names));
     }
 
     @Override
@@ -163,14 +184,14 @@ final class WarpCommand implements CommandExecutor, TabCompleter {
         return options.stream().filter(option -> option.startsWith(prefix)).distinct().sorted().limit(50).toList();
     }
 
-    private void feedback(CommandSender sender, String message) {
-        if (plugin.feedback() && message != null) {
-            reply(sender, message);
+    private void feedback(CommandSender sender, String key, Object... placeholders) {
+        if (plugin.feedback()) {
+            reply(sender, key, placeholders);
         }
     }
 
-    private static void reply(CommandSender sender, String message) {
-        sender.sendMessage(Component.text(message));
+    private void reply(CommandSender sender, String key, Object... placeholders) {
+        plugin.messages().send(sender, key, placeholders);
     }
 
     private static int page(String[] args, int offset) {
@@ -178,23 +199,23 @@ final class WarpCommand implements CommandExecutor, TabCompleter {
             return 1;
         }
         if (args.length != offset + 1) {
-            throw new IllegalArgumentException("Specify one page number.");
+            throw new WarpProblem("invalid-page-arguments");
         }
         int page;
         try {
             page = Integer.parseInt(args[offset]);
         } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("Page must be a positive number.");
+            throw new WarpProblem("invalid-page");
         }
         if (page < 1) {
-            throw new IllegalArgumentException("Page must be a positive number.");
+            throw new WarpProblem("invalid-page");
         }
         return page;
     }
 
     private static void exact(String[] args, int count) {
         if (args.length != count) {
-            throw new IllegalArgumentException("Use /pwarp help for command syntax.");
+            throw new WarpProblem("usage");
         }
     }
 }

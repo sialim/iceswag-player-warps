@@ -29,7 +29,7 @@ record PlayerWarp(String name, UUID owner, String ownerName, UUID world, double 
     Location location(Server server) {
         World destination = server.getWorld(world);
         if (destination == null) {
-            throw new IllegalArgumentException("That warp's world is unavailable.");
+            throw new WarpProblem("world-unavailable", "warp", name);
         }
         return new Location(destination, x, y, z, yaw, pitch);
     }

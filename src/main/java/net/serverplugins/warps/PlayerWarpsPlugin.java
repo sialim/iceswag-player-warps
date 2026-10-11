@@ -11,6 +11,7 @@ public class PlayerWarpsPlugin extends JavaPlugin {
     private WarpService service;
     private WarpTeleporter teleporter;
     private CommandBindings bindings;
+    private WarpMessages messages;
     private String error;
 
     @Override
@@ -28,6 +29,8 @@ public class PlayerWarpsPlugin extends JavaPlugin {
         admin.setExecutor(administration);
         admin.setTabCompleter(administration);
         try {
+            YamlConfiguration defaults = readDefaults();
+            messages = WarpMessages.load(defaults, defaults);
             saveDefaultConfig();
             reloadWarps();
         } catch (Exception exception) {
@@ -59,21 +62,59 @@ public class PlayerWarpsPlugin extends JavaPlugin {
         return service != null && service.settings().commandFeedback();
     }
 
+    WarpMessages messages() {
+        return messages;
+    }
+
     void reloadWarps() throws Exception {
-        WarpSettings replacement = readSettings();
+        YamlConfiguration defaults = readDefaults();
+        YamlConfiguration config = readConfiguration(defaults);
+        WarpSettings replacement = WarpSettings.load(config);
+        WarpMessages replacementMessages = WarpMessages.load(config, defaults);
+        if (service == null) {
+            messages = replacementMessages;
+        }
         WarpStore store = new WarpStore(getDataFolder().toPath().resolve("warps.yml"));
+        mergeMessages(config, defaults);
         service = new WarpService(store, replacement);
+        messages = replacementMessages;
         error = null;
         bindings.apply(replacement.claimCommands());
     }
 
-    private WarpSettings readSettings() throws Exception {
+    private YamlConfiguration readConfiguration(YamlConfiguration defaults) throws Exception {
         YamlConfiguration config = new YamlConfiguration();
         config.load(new File(getDataFolder(), "config.yml"));
-        try (var input = new InputStreamReader(Objects.requireNonNull(getResource("config.yml")), StandardCharsets.UTF_8)) {
-            config.setDefaults(YamlConfiguration.loadConfiguration(input));
-            config.options().copyDefaults(true);
+        if (!config.contains("messages.no-permission", true)) {
+            config.set("messages.command-feedback", true);
         }
-        return WarpSettings.load(config);
+        config.setDefaults(defaults);
+        config.options().copyDefaults(true);
+        return config;
+    }
+
+    private YamlConfiguration readDefaults() throws Exception {
+        YamlConfiguration defaults = new YamlConfiguration();
+        try (var input = new InputStreamReader(Objects.requireNonNull(getResource("config.yml")), StandardCharsets.UTF_8)) {
+            defaults.load(input);
+        }
+        return defaults;
+    }
+
+    private void mergeMessages(YamlConfiguration config, YamlConfiguration defaults) throws Exception {
+        boolean changed = false;
+        var section = Objects.requireNonNull(defaults.getConfigurationSection("messages"));
+        for (var entry : section.getValues(true).entrySet()) {
+            if (entry.getValue() instanceof String || entry.getValue() instanceof Boolean) {
+                String path = "messages." + entry.getKey();
+                if (!config.contains(path, true)) {
+                    config.set(path, entry.getValue());
+                    changed = true;
+                }
+            }
+        }
+        if (changed) {
+            config.save(new File(getDataFolder(), "config.yml"));
+        }
     }
 }
