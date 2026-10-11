@@ -1,0 +1,51 @@
+name: PlayerWarps
+version: '${version}'
+main: net.serverplugins.warps.PlayerWarpsPlugin
+api-version: '1.21.11'
+description: Public player-owned warps with rank limits and Essentials teleportation.
+depend: [Essentials]
+commands:
+  pwarp:
+    description: Visit, list, or manage player warps.
+    aliases: [pw]
+    usage: /pwarp <name> | set <name> | delete <name> | move <name> | rename <name> <new-name> | list [page] | mine [page] | status
+  setwarp:
+    description: Create a player warp at your location.
+    usage: /setwarp <name>
+  delwarp:
+    description: Delete one of your player warps.
+    usage: /delwarp <name>
+  warps:
+    description: List public player warps.
+    usage: /warps [page]
+  pwarpadmin:
+    description: Inspect, reload, or moderate player warps.
+    usage: /pwarpadmin status | reload | delete <name>
+permissions:
+  playerwarps.use:
+    description: Visit and list player warps.
+    default: false
+  playerwarps.create:
+    description: Create player warps within the rank allowance.
+    default: false
+  playerwarps.manage:
+    description: Move, rename, or delete your own player warps.
+    default: false
+  playerwarps.unlimited:
+    description: Bypass the number of owned warps.
+    default: false
+  playerwarps.admin:
+    description: Reload, inspect, and delete any player warp.
+    default: op
+  playerwarps.rank.member:
+    default: false
+  playerwarps.rank.farmer:
+    default: false
+  playerwarps.rank.specialist:
+    default: false
+  playerwarps.rank.knight:
+    default: false
+  playerwarps.rank.lord:
+    default: false
+  playerwarps.rank.monarch:
+    default: false

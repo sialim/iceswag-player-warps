@@ -1,0 +1,34 @@
+commands:
+  claim-essentials-warp-commands: true
+warps:
+  public: true
+  maximum-name-length: 32
+  page-size: 12
+  disabled-worlds: []
+messages:
+  command-feedback: false
+ranks:
+  member:
+    permission: playerwarps.rank.member
+    priority: 0
+    warp-limit: 0
+  farmer:
+    permission: playerwarps.rank.farmer
+    priority: 10
+    warp-limit: 1
+  specialist:
+    permission: playerwarps.rank.specialist
+    priority: 20
+    warp-limit: 1
+  knight:
+    permission: playerwarps.rank.knight
+    priority: 30
+    warp-limit: 2
+  lord:
+    permission: playerwarps.rank.lord
+    priority: 40
+    warp-limit: 3
+  monarch:
+    permission: playerwarps.rank.monarch
+    priority: 50
+    warp-limit: 10
